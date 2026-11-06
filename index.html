@@ -1,9 +1,15 @@
 <!--
   ============================================
-  VERSÃO ATUAL: 180
+  VERSÃO ATUAL: 181
   ============================================
 
   Histórico de versões (calendário SERVIÇO / DELEGADA / DEJEM):
+  v181: APRESENTAÇÃO (REVISTA) NA FICHA. Na ficha do dia, o quadro "Escala de
+    serviço: Trabalho" saiu. No lugar entra o item "Apresentação (revista)"
+    com o local e o horário em que você se apresenta, vindos do e-mail, e
+    o ID da escala aparece ao lado do Valor
+    (importador). Se o dia não tem esse dado, o item não aparece. Ao editar
+    local/horário, a revista é preservada.
   v180: FACE ID AO ABRIR O APP. Os campos de e-mail e senha da janela
     SINCRONIZAR ficavam na página o tempo todo (só transparentes), então o
     iPhone achava que era uma tela de login e pedia Face ID / senha
@@ -2016,7 +2022,9 @@ html.modal-aberto, html.modal-aberto body{ overflow:hidden; overscroll-behavior:
 .fc-val{ display:block; font-size:18px; line-height:1.25; font-weight:700; color:#fff; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
 .fc-val.vazio{ font-size:15px; font-weight:600; color:#8794a3; }
 .fc-det{ display:block; margin-top:3px; font-size:12.5px; color:#9aa7b6; font-variant-numeric:tabular-nums; }
-.fc-duo{ display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:14px 0 4px; }
+.fc-item[hidden], .fc-stat[hidden]{ display:none; }
+.fc-duo.dois{ grid-template-columns:1fr 1fr; }
+.fc-duo{ display:grid; grid-template-columns:1fr; gap:10px; padding:14px 0 4px; }
 .fc-stat{ background:#1a1e24; border:1px solid #262d35; border-radius:12px; padding:10px 12px; min-width:0; }
 .fc-stat b{ display:block; font-size:15px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums; }
 .fc-stat b.verde{ color:#7ee04a; }
@@ -2824,9 +2832,13 @@ html[data-layout="stack"] .tabs button{ transition:color .25s ease; }
         <span class="fc-ico"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></span>
         <div><span class="fc-rot">Horário</span><b class="fc-val" id="fichaHora"></b><span class="fc-det" id="fichaDur"></span></div>
       </div>
-      <div class="fc-duo">
+      <div class="fc-duo" id="fichaDuo">
         <div class="fc-stat"><span class="fc-rot">Valor</span><b class="verde" id="fichaValor"></b></div>
-        <div class="fc-stat"><span class="fc-rot">Escala de serviço</span><b id="fichaEscala"></b></div>
+        <div class="fc-stat" id="fichaIdBox" hidden><span class="fc-rot">ID da escala</span><b id="fichaId"></b></div>
+      </div>
+      <div class="fc-item" id="fichaRevItem" hidden>
+        <span class="fc-ico"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.2 7.7-8 9-4.8-1.3-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span>
+        <div><span class="fc-rot">Apresentação (revista)</span><b class="fc-val" id="fichaRevLocal"></b><span class="fc-det" id="fichaRevHora"></span></div>
       </div>
     </div>
     <div class="fc-acoes">
@@ -3211,7 +3223,7 @@ async function avisoSemContaModal(){
 let syncUpdatedAt = (lerJSONLocal(SYNC_META_KEY) || {}).updatedAt || 0;
 let syncTimer = null;
 let syncPendente = false;
-const VERSAO_SITE = 180;
+const VERSAO_SITE = 181;
 let syncNuvemUpdatedAt = 0;
 let syncEstado = 'off';   // off | sync | ok | erro
 let syncMensagem = '';
@@ -4567,7 +4579,12 @@ function concluirServico(comInfo){
   s.keys.forEach((k, idx) => {
     const p = k.split('|');
     if(s.modo === 'novo'){ setColorFor(p[0], p[1], p[2], s.cor); recemPintados.add(k); }
-    if(comInfo) detalhes[k] = (s.multi && s.escolhas[idx]) ? s.escolhas[idx] : { l: loc.aisp, n: loc.nome, m: loc.modulo, i: i, f: f };
+    if(comInfo){
+      const antigo = detalhes[k];
+      const novo = (s.multi && s.escolhas[idx]) ? s.escolhas[idx] : { l: loc.aisp, n: loc.nome, m: loc.modulo, i: i, f: f };
+      if(antigo){ ['rl','rh','e'].forEach(c => { if(antigo[c] && novo[c] === undefined) novo[c] = antigo[c]; }); }
+      detalhes[k] = novo;
+    }
   });
   fecharServico();
   vibrar(15);
@@ -4812,8 +4829,16 @@ function abrirFicha(key){
   document.getElementById('fichaDur').textContent = temHora ? duracaoTxt(det.i, det.f).replace(/^./, c => c.toUpperCase()) : '';
   const valor = RATES[cal] && RATES[cal][cor];
   document.getElementById('fichaValor').textContent = valor !== undefined ? 'R$ ' + fmtBRL(valor) : '—';
-  const serv = getColorFor('servico', p[1], p[2]);
-  document.getElementById('fichaEscala').textContent = serv === 'azul' ? 'Trabalho' : serv === 'verde' ? 'Folga mensal' : anoTemServico(p[1]) ? 'Folga' : '—';
+  const idBox = document.getElementById('fichaIdBox'), temId = !!(det && det.e);
+  idBox.hidden = !temId;
+  document.getElementById('fichaDuo').classList.toggle('dois', temId);
+  if(temId) document.getElementById('fichaId').textContent = det.e;
+  const revItem = document.getElementById('fichaRevItem'), temRev = !!(det && (det.rl || det.rh));
+  revItem.hidden = !temRev;
+  if(temRev){
+    document.getElementById('fichaRevLocal').textContent = det.rl || 'Local não informado';
+    document.getElementById('fichaRevHora').textContent = det.rh ? 'Às ' + det.rh : '';
+  }
   document.getElementById('fichaEditar').textContent = (loc || temHora) ? 'Editar local e horário' : 'Informar local e horário';
   const mapa = document.getElementById('fichaMapa');
   mapa.hidden = !(dejem && loc && loc.aisp);
