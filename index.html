@@ -1,9 +1,15 @@
 <!--
   ============================================
-  VERSÃO ATUAL: 179
+  VERSÃO ATUAL: 180
   ============================================
 
   Histórico de versões (calendário SERVIÇO / DELEGADA / DEJEM):
+  v180: FACE ID AO ABRIR O APP. Os campos de e-mail e senha da janela
+    SINCRONIZAR ficavam na página o tempo todo (só transparentes), então o
+    iPhone achava que era uma tela de login e pedia Face ID / senha
+    automática ao abrir o app, mesmo já logado. Agora a janela fica fora da
+    tela (display:none) e só entra quando você toca em SINCRONIZAR; ao
+    fechar, sai de novo. Nada mais muda no uso do calendário.
   v179: VÁRIOS DIAS SELECIONADOS: a janela "Local e horário" agora pergunta
     UM DIA DE CADA VEZ ("Dia 1 de 3 - segunda-feira, 12 de outubro"), cada
     um com o seu local e o seu horário, em ordem de data. Antes o mesmo
@@ -2553,6 +2559,8 @@ html[data-layout="stack"] .tabs button{ transition:color .25s ease; }
 .ab-q.q4{ animation-delay:.61s; } .ab-q.q5{ animation-delay:.73s; } .ab-q.q6{ animation-delay:.85s; }
 @keyframes abAcende{ from{ opacity:0; transform:scale(.3); } to{ opacity:1; transform:none; } }
 
+/* ===== v180: janela de login fora da tela quando fechada (evita o Face ID / senha automática do iPhone ao abrir o app) ===== */
+#syncModalOverlay.oculto{ display:none; }
 /* ===== v179: vários dias, um de cada vez ===== */
 .sv-passos{ display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
 .sv-passos[hidden]{ display:none; }
@@ -2709,7 +2717,7 @@ html[data-layout="stack"] .tabs button{ transition:color .25s ease; }
   </div>
 </div>
 
-<div class="modal-overlay" id="syncModalOverlay">
+<div class="modal-overlay oculto" id="syncModalOverlay">
   <div class="modal-box">
     <div class="sync-marca"><svg viewBox="0 0 64 64" width="58" height="58" aria-hidden="true">
       <rect x="4" y="4" width="56" height="56" rx="15" fill="#141a23" stroke="#2c3745" stroke-width="1.5"/>
@@ -3203,7 +3211,7 @@ async function avisoSemContaModal(){
 let syncUpdatedAt = (lerJSONLocal(SYNC_META_KEY) || {}).updatedAt || 0;
 let syncTimer = null;
 let syncPendente = false;
-const VERSAO_SITE = 179;
+const VERSAO_SITE = 180;
 let syncNuvemUpdatedAt = 0;
 let syncEstado = 'off';   // off | sync | ok | erro
 let syncMensagem = '';
@@ -3549,10 +3557,15 @@ function atualizarModalSync(){
 function abrirModalSync(){
   syncModoCriarConta = false;
   atualizarModalSync();
+  clearTimeout(abrirModalSync._t);
+  syncModalOverlay.classList.remove('oculto');   // v180: os campos de login só existem na tela enquanto a janela está aberta
+  void syncModalOverlay.offsetWidth;
   syncModalOverlay.classList.add('show');
 }
 function fecharModalSync(){
   syncModalOverlay.classList.remove('show');
+  clearTimeout(abrirModalSync._t);
+  abrirModalSync._t = setTimeout(() => { if(!syncModalOverlay.classList.contains('show')) syncModalOverlay.classList.add('oculto'); }, 260);
   syncPassInput.value = '';
   syncPassConfirmInput.value = '';
   syncPassInput.type = 'password';
