@@ -1,13 +1,19 @@
 <!--
   ============================================
-  VERSÃO ATUAL: 183
+  VERSÃO ATUAL: 185
   ============================================
 
   Histórico de versões (calendário SERVIÇO / DELEGADA / DEJEM):
+  v185: TOQUE PARA PULAR A ABERTURA. Tocando na tela durante a abertura Matrix,
+    ela sai na hora (com a mesma saída suave). Sem tocar, roda completa.
+  v184: ABERTURA MAIS LENTA E COMPLETA. A abertura Matrix agora roda no tempo
+    normal (antes estava 1,5x mais rápida) e fica na tela até terminar (~4,3s):
+    dá tempo de ler "SERVIÇO · DELEGADA · DEJEM" e ver a barra encher. Sempre
+    completa, em toda abertura (a v185 devolveu o toque para pular).
   v183: ABERTURA E ÍCONE ESTILO MATRIX. A tela de abertura agora é o túnel de
     letras e números voando na sua direção; o nome "Calendário" aparece
     embaralhado e cada letra trava até formar a palavra, com tremor, onda de
-    choque e flash. Dura cerca de 2,4s (toque na tela para pular). Com
+    choque e flash. Dura cerca de 2,4s. Com
     "reduzir movimento" ligado no iPhone, aparece parada. Ícone novo (túnel
     verde com o calendário no centro): trocar apple-touch-icon.png,
     icon-192.png, icon-512.png e icon-512-maskable.png (mesmos nomes; o
@@ -3234,7 +3240,7 @@ async function avisoSemContaModal(){
 let syncUpdatedAt = (lerJSONLocal(SYNC_META_KEY) || {}).updatedAt || 0;
 let syncTimer = null;
 let syncPendente = false;
-const VERSAO_SITE = 183;
+const VERSAO_SITE = 185;
 let syncNuvemUpdatedAt = 0;
 let syncEstado = 'off';   // off | sync | ok | erro
 let syncMensagem = '';
@@ -5620,7 +5626,7 @@ applyLayout();
 // só então os meses entram em cascata.
 const aberturaInicio = performance.now();
 let aberturaFechada = false;
-const ABERTURA_MIN = 2400;   // v183: tempo da animação Matrix (o flash do nome é em ~1,8s)
+const ABERTURA_MIN = 4400;   // v184: animação Matrix completa (flash do nome em 2,7s, barra termina em ~3,8s)
 function fecharAbertura(pular){
   if(aberturaFechada) return;
   aberturaFechada = true;
@@ -5634,7 +5640,7 @@ function fecharAbertura(pular){
   }, espera);
 }
 window.addEventListener('sync-backend-missing', fecharAbertura);
-setTimeout(fecharAbertura, 3600);
+setTimeout(fecharAbertura, 5200);
 (function abMatrix(){
   const ab = document.getElementById('abertura'), cv = document.getElementById('abCv');
   if(!ab || !cv) return;
@@ -5644,7 +5650,7 @@ setTimeout(fecharAbertura, 3600);
   const ch = () => KAT[(Math.random() * KAT.length) | 0];
   const suave = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
   const MONO = 'ui-monospace, Menlo, "SF Mono", Consolas, monospace', TIT = '"Inter","Segoe UI",system-ui,Arial,sans-serif';
-  const TXT = 'Calendário', VEL = 1.5;
+  const TXT = 'Calendário', VEL = 1;
   let W = 0, H = 0, k = 1, raf = 0, t0 = performance.now();
   function ajusta(){
     const d = Math.min(window.devicePixelRatio || 1, 2); W = window.innerWidth; H = window.innerHeight; k = Math.min(W, 520) / 300;
