@@ -1,9 +1,12 @@
 <!--
   ============================================
-  VERSÃO ATUAL: 186
+  VERSÃO ATUAL: 187
   ============================================
 
   Histórico de versões (calendário SERVIÇO / DELEGADA / DEJEM):
+  v187: BOLINHA BRANCA REMOVIDA. Saiu a bolinha branca no canto dos dias que
+    têm local e horário. Os dados continuam salvos e aparecem ao tocar no dia
+    (ficha). A bolinha roxa dos feriados continua.
   v186: PULAR A ABERTURA DE VERDADE. O toque da v185 não funcionava quando você
     está logado (a abertura já estava "agendada para sair" e o toque era
     ignorado) e o iPhone ainda pode ignorar "click" em área sem botão. Agora o
@@ -2083,7 +2086,6 @@ html[data-layout="stack"] .sv-foot, html[data-layout="stack"] .fc-acoes{ border-
 @media (prefers-reduced-motion:reduce){ .sv-box, .sv-tile, .sv-chip{ transition:none !important; } }
 /* marca dos dias com local informado */
 table.dowtable td.tem-local{ position:relative; }
-table.dowtable td.tem-local::after{ content:''; position:absolute; top:2px; right:2px; width:4px; height:4px; border-radius:50%; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.35); pointer-events:none; }
 html.imprimindo table.dowtable td.tem-local::after{ display:none !important; }
 
 /* =====================================================================
@@ -3245,7 +3247,7 @@ async function avisoSemContaModal(){
 let syncUpdatedAt = (lerJSONLocal(SYNC_META_KEY) || {}).updatedAt || 0;
 let syncTimer = null;
 let syncPendente = false;
-const VERSAO_SITE = 186;
+const VERSAO_SITE = 187;
 let syncNuvemUpdatedAt = 0;
 let syncEstado = 'off';   // off | sync | ok | erro
 let syncMensagem = '';
