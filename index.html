@@ -1,9 +1,12 @@
 <!--
   ============================================
-  VERSÃO ATUAL: 181
+  VERSÃO ATUAL: 182
   ============================================
 
   Histórico de versões (calendário SERVIÇO / DELEGADA / DEJEM):
+  v182: COPIAR O ID DA ESCALA. Tocar no quadro "ID da escala" na ficha copia o
+    número, com efeito: onda de luz a partir do toque, o quadro dá um pulo, o
+    número vira "Copiado" com um visto e uma vibração curta. Nada mais muda.
   v181: APRESENTAÇÃO (REVISTA) NA FICHA. Na ficha do dia, o quadro "Escala de
     serviço: Trabalho" saiu. No lugar entra o item "Apresentação (revista)"
     com o local e o horário em que você se apresenta, vindos do e-mail, e
@@ -2023,6 +2026,17 @@ html.modal-aberto, html.modal-aberto body{ overflow:hidden; overscroll-behavior:
 .fc-val.vazio{ font-size:15px; font-weight:600; color:#8794a3; }
 .fc-det{ display:block; margin-top:3px; font-size:12.5px; color:#9aa7b6; font-variant-numeric:tabular-nums; }
 .fc-item[hidden], .fc-stat[hidden]{ display:none; }
+.fc-copiavel{ position:relative; overflow:hidden; text-align:left; font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform .18s ease, border-color .25s, background .25s; }
+.fc-copiavel:active{ transform:scale(.96); }
+.fc-copiavel .fc-onda{ position:absolute; left:var(--ox,50%); top:var(--oy,50%); width:20px; height:20px; margin:-10px 0 0 -10px; border-radius:50%; background:radial-gradient(circle, rgba(126,224,74,.55), rgba(126,224,74,0) 70%); opacity:0; pointer-events:none; }
+.fc-copiavel .fc-visto{ position:absolute; right:12px; top:50%; margin-top:-9px; color:#7ee04a; opacity:0; transform:scale(.3) rotate(-25deg); transition:opacity .2s, transform .35s cubic-bezier(.3,1.6,.5,1); }
+.fc-copiavel.copiado{ border-color:#7ee04a; background:#1b2a1d; animation:fcPulo .45s cubic-bezier(.3,1.6,.5,1); }
+.fc-copiavel.copiado .fc-onda{ animation:fcOnda .7s ease-out; }
+.fc-copiavel.copiado .fc-visto{ opacity:1; transform:none; }
+.fc-copiavel.copiado b{ color:#7ee04a; }
+@keyframes fcOnda{ 0%{ opacity:.9; transform:scale(1); } 100%{ opacity:0; transform:scale(22); } }
+@keyframes fcPulo{ 0%{ transform:scale(1); } 40%{ transform:scale(1.07); } 100%{ transform:scale(1); } }
+@media (prefers-reduced-motion:reduce){ .fc-copiavel, .fc-copiavel.copiado, .fc-copiavel .fc-visto{ animation:none !important; transition:none !important; } .fc-copiavel.copiado .fc-onda{ display:none; } }
 .fc-duo.dois{ grid-template-columns:1fr 1fr; }
 .fc-duo{ display:grid; grid-template-columns:1fr; gap:10px; padding:14px 0 4px; }
 .fc-stat{ background:#1a1e24; border:1px solid #262d35; border-radius:12px; padding:10px 12px; min-width:0; }
@@ -2834,7 +2848,7 @@ html[data-layout="stack"] .tabs button{ transition:color .25s ease; }
       </div>
       <div class="fc-duo" id="fichaDuo">
         <div class="fc-stat"><span class="fc-rot">Valor</span><b class="verde" id="fichaValor"></b></div>
-        <div class="fc-stat" id="fichaIdBox" hidden><span class="fc-rot">ID da escala</span><b id="fichaId"></b></div>
+        <button type="button" class="fc-stat fc-copiavel" id="fichaIdBox" hidden aria-label="Copiar ID da escala"><span class="fc-rot" id="fichaIdRot">ID da escala</span><b id="fichaId"></b><i class="fc-onda"></i><svg class="fc-visto" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
       </div>
       <div class="fc-item" id="fichaRevItem" hidden>
         <span class="fc-ico"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.2 7.7-8 9-4.8-1.3-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span>
@@ -3223,7 +3237,7 @@ async function avisoSemContaModal(){
 let syncUpdatedAt = (lerJSONLocal(SYNC_META_KEY) || {}).updatedAt || 0;
 let syncTimer = null;
 let syncPendente = false;
-const VERSAO_SITE = 181;
+const VERSAO_SITE = 182;
 let syncNuvemUpdatedAt = 0;
 let syncEstado = 'off';   // off | sync | ok | erro
 let syncMensagem = '';
@@ -4850,6 +4864,29 @@ function abrirFicha(key){
 function fecharFicha(){ fichaOverlay.classList.remove('show'); fichaDesarmarApagar(); fichaKey = null; }
 document.getElementById('fichaFechar').addEventListener('click', fecharFicha);
 fichaOverlay.addEventListener('click', e => { if(e.target === fichaOverlay) fecharFicha(); });
+(function(){
+  const box = document.getElementById('fichaIdBox'), rot = document.getElementById('fichaIdRot'), num = document.getElementById('fichaId');
+  let t = null;
+  function copiarTexto(txt){
+    if(navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(txt);
+    return new Promise((ok, erro) => {
+      const ta = document.createElement('textarea'); ta.value = txt; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+      document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, 99999);
+      try{ document.execCommand('copy') ? ok() : erro(); }catch(e){ erro(e); } ta.remove();
+    });
+  }
+  box.addEventListener('click', ev => {
+    const txt = (num.textContent || '').trim(); if(!txt) return;
+    const r = box.getBoundingClientRect();
+    box.style.setProperty('--ox', (ev.clientX ? ev.clientX - r.left : r.width / 2) + 'px');
+    box.style.setProperty('--oy', (ev.clientY ? ev.clientY - r.top : r.height / 2) + 'px');
+    copiarTexto(txt).then(() => {
+      box.classList.remove('copiado'); void box.offsetWidth; box.classList.add('copiado');
+      rot.textContent = 'Copiado'; vibrar([10, 40, 14]);
+      clearTimeout(t); t = setTimeout(() => { box.classList.remove('copiado'); rot.textContent = 'ID da escala'; }, 1600);
+    }, () => { rot.textContent = 'Não copiou'; clearTimeout(t); t = setTimeout(() => { rot.textContent = 'ID da escala'; }, 1600); });
+  });
+})();
 document.getElementById('fichaEditar').addEventListener('click', () => {
   if(!fichaKey) return;
   if(semConta()){ fecharFicha(); avisoSemConta(); return; }
