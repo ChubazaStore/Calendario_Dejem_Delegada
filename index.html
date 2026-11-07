@@ -1,9 +1,18 @@
 <!--
   ============================================
-  VERSÃO ATUAL: 182
+  VERSÃO ATUAL: 183
   ============================================
 
   Histórico de versões (calendário SERVIÇO / DELEGADA / DEJEM):
+  v183: ABERTURA E ÍCONE ESTILO MATRIX. A tela de abertura agora é o túnel de
+    letras e números voando na sua direção; o nome "Calendário" aparece
+    embaralhado e cada letra trava até formar a palavra, com tremor, onda de
+    choque e flash. Dura cerca de 2,4s (toque na tela para pular). Com
+    "reduzir movimento" ligado no iPhone, aparece parada. Ícone novo (túnel
+    verde com o calendário no centro): trocar apple-touch-icon.png,
+    icon-192.png, icon-512.png e icon-512-maskable.png (mesmos nomes; o
+    manifest.json continua o mesmo). No iPhone pode ser preciso remover o app
+    da tela inicial e adicionar de novo para o ícone novo aparecer.
   v182: COPIAR O ID DA ESCALA. Tocar no quadro "ID da escala" na ficha copia o
     número, com efeito: onda de luz a partir do toque, o quadro dá um pulo, o
     número vira "Copiado" com um visto e uma vibração curta. Nada mais muda.
@@ -2374,9 +2383,10 @@ html.menu-aberto[data-layout="stack"] #menuBtn{ border-color:var(--dest); }
 .tema-op.on i{ box-shadow:0 0 0 2px #14171b, 0 0 0 4px var(--dest); }
 .tema-op:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
 /* tela de abertura */
-#abertura{ position:fixed; inset:0; z-index:6000; background:#0b0e13; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+#abertura{ position:fixed; inset:0; z-index:6000; background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
   font-family:'Inter','Segoe UI',Arial,sans-serif; transition:opacity .38s ease, transform .38s ease; }
 #abertura.saindo{ opacity:0; transform:scale(1.04); pointer-events:none; }
+#abertura canvas{ position:absolute; inset:0; width:100%; height:100%; display:block; }
 .ab-marca{ margin-bottom:14px; animation:abMarca .6s cubic-bezier(.2,.8,.2,1) both; }
 .ab-topo{ fill:var(--dest); }
 .ab-d1{ animation:abPonto 1.4s .25s ease-in-out infinite both; } .ab-d2{ animation:abPonto 1.4s .6s ease-in-out infinite both; }
@@ -2599,20 +2609,7 @@ html[data-layout="stack"] .tabs button{ transition:color .25s ease; }
 </style>
 </head>
 <body>
-<div id="abertura" aria-hidden="true">
-  <div class="ab-marca">
-    <svg viewBox="0 0 64 64" width="76" height="76" aria-hidden="true">
-      <rect x="4" y="4" width="56" height="56" rx="15" fill="#141a23" stroke="#2c3745" stroke-width="1.5"/>
-      <rect x="4" y="4" width="56" height="17" rx="15" class="ab-topo"/><rect x="4" y="13" width="56" height="8" class="ab-topo"/>
-      <g fill="#33404f"><rect x="13" y="27" width="10" height="10" rx="3"/><rect x="27" y="27" width="10" height="10" rx="3"/><rect x="41" y="27" width="10" height="10" rx="3"/><rect x="13" y="41" width="10" height="10" rx="3"/><rect x="27" y="41" width="10" height="10" rx="3"/><rect x="41" y="41" width="10" height="10" rx="3"/></g>
-      <rect class="ab-q q1" x="13" y="27" width="10" height="10" rx="3" fill="#00B0F0"/><rect class="ab-q q2" x="27" y="27" width="10" height="10" rx="3" fill="#2F63FF"/><rect class="ab-q q3" x="41" y="27" width="10" height="10" rx="3" fill="#EAB308"/>
-      <rect class="ab-q q4" x="13" y="41" width="10" height="10" rx="3" fill="#FF6B00"/><rect class="ab-q q5" x="27" y="41" width="10" height="10" rx="3" fill="#FF2A3A"/><rect class="ab-q q6" x="41" y="41" width="10" height="10" rx="3" fill="#61F000"/>
-    </svg>
-  </div>
-  <div class="ab-nome">Calendário</div>
-  <div class="ab-sub">Serviço · Delegada · Dejem</div>
-  <div class="ab-barra"><i></i></div>
-</div>
+<div id="abertura" aria-hidden="true"><canvas id="abCv"></canvas></div>
 
 <div class="page-wrap">
 <div class="topbar">
@@ -3237,7 +3234,7 @@ async function avisoSemContaModal(){
 let syncUpdatedAt = (lerJSONLocal(SYNC_META_KEY) || {}).updatedAt || 0;
 let syncTimer = null;
 let syncPendente = false;
-const VERSAO_SITE = 182;
+const VERSAO_SITE = 183;
 let syncNuvemUpdatedAt = 0;
 let syncEstado = 'off';   // off | sync | ok | erro
 let syncMensagem = '';
@@ -5623,10 +5620,11 @@ applyLayout();
 // só então os meses entram em cascata.
 const aberturaInicio = performance.now();
 let aberturaFechada = false;
-function fecharAbertura(){
+const ABERTURA_MIN = 2400;   // v183: tempo da animação Matrix (o flash do nome é em ~1,8s)
+function fecharAbertura(pular){
   if(aberturaFechada) return;
   aberturaFechada = true;
-  const espera = Math.max(0, 650 - (performance.now() - aberturaInicio));   // mínimo para não "piscar"
+  const espera = pular === true ? 0 : Math.max(0, ABERTURA_MIN - (performance.now() - aberturaInicio));
   setTimeout(() => {
     const ab = document.getElementById('abertura'), r = document.documentElement;
     try{ contarResumoAte = Date.now() + 250; render(); rolarParaMesAtual(); }catch(e){}
@@ -5636,7 +5634,79 @@ function fecharAbertura(){
   }, espera);
 }
 window.addEventListener('sync-backend-missing', fecharAbertura);
-setTimeout(fecharAbertura, 3200);
+setTimeout(fecharAbertura, 3600);
+(function abMatrix(){
+  const ab = document.getElementById('abertura'), cv = document.getElementById('abCv');
+  if(!ab || !cv) return;
+  ab.addEventListener('click', () => fecharAbertura(true));
+  const cx = cv.getContext('2d'); if(!cx) return;
+  const KAT = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉ0123456789ABCDEF<>/=+*#'.split('');
+  const ch = () => KAT[(Math.random() * KAT.length) | 0];
+  const suave = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+  const MONO = 'ui-monospace, Menlo, "SF Mono", Consolas, monospace', TIT = '"Inter","Segoe UI",system-ui,Arial,sans-serif';
+  const TXT = 'Calendário', VEL = 1.5;
+  let W = 0, H = 0, k = 1, raf = 0, t0 = performance.now();
+  function ajusta(){
+    const d = Math.min(window.devicePixelRatio || 1, 2); W = window.innerWidth; H = window.innerHeight; k = Math.min(W, 520) / 300;
+    cv.width = Math.round(W * d); cv.height = Math.round(H * d); cx.setTransform(d, 0, 0, d, 0, 0);
+    cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H);
+  }
+  const novoP = z => { const a = Math.random() * 6.283, r = 40 + Math.random() * 520; return { x: Math.cos(a) * r, y: Math.sin(a) * r, z: z, c: ch() }; };
+  const P = []; for(let i = 0; i < 240; i++) P.push(novoP(Math.random()));
+  const trava = []; for(let i = 0; i < TXT.length; i++) trava.push(1.3 + i * .13 + Math.random() * .12);
+  function quadro(t, f){
+    f = f || 1;
+    const sh = (t > 2.7 && t < 3.05) ? (Math.random() - .5) * 10 : 0;
+    cx.save(); cx.translate(sh, sh * .6);
+    cx.fillStyle = 'rgba(0,0,0,.28)'; cx.fillRect(-12, -12, W + 24, H + 24);
+    const vel = (t < 1.4 ? .012 : t < 2.2 ? .012 + (t - 1.4) * .05 : .016) * VEL / 1.5 * 1.5, mx = W / 2, my = H * .45;
+    cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    for(let i = 0; i < P.length; i++){
+      const p = P[i], z0 = p.z; p.z -= vel * .9 * f; if(p.z <= .02){ P[i] = novoP(1); continue; }
+      const kk = 1 / p.z * .42 * .5 * k, x = mx + p.x * kk, y = my + p.y * kk, kk0 = 1 / (z0 + .05) * .42 * .5 * k, x0 = mx + p.x * kk0, y0 = my + p.y * kk0;
+      const s = Math.min(28 * k, (6 + (1 - p.z) * 22) * k), al = Math.min(1, (1 - p.z) * 1.6);
+      if(Math.random() < .08) p.c = ch();
+      cx.strokeStyle = 'rgba(45,255,107,' + (al * .35).toFixed(2) + ')'; cx.lineWidth = Math.max(.5, s / 14); cx.beginPath(); cx.moveTo(x0, y0); cx.lineTo(x, y); cx.stroke();
+      cx.font = '700 ' + s.toFixed(0) + 'px ' + MONO; cx.fillStyle = p.z < .25 ? '#eafff0' : 'rgba(45,255,107,' + al.toFixed(2) + ')'; cx.fillText(p.c, x, y);
+    }
+    const g = cx.createRadialGradient(mx, my, 0, mx, my, 120 * k); g.addColorStop(0, 'rgba(201,255,216,.35)'); g.addColorStop(1, 'rgba(45,255,107,0)'); cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+    if(t > 1.1){
+      cx.globalAlpha = suave((t - 1.1) / .4);
+      const fs = Math.min(W * .12, 56); cx.font = '900 ' + fs + 'px ' + TIT; cx.textAlign = 'left';
+      let larg = 0; const ws = []; for(let i = 0; i < TXT.length; i++){ const w = cx.measureText(TXT[i]).width; ws.push(w); larg += w; }
+      let x = mx - larg / 2;
+      for(let j = 0; j < TXT.length; j++){
+        const preso = t >= trava[j];
+        cx.shadowColor = '#2dff6b'; cx.shadowBlur = preso ? 26 : 6; cx.fillStyle = preso ? '#eafff0' : '#2dff6b';
+        const dx = preso && t - trava[j] < .25 ? (Math.random() - .5) * 6 : 0;
+        cx.fillText(preso ? TXT[j] : ch(), x + dx, my); x += ws[j];
+      }
+      cx.shadowBlur = 0; cx.globalAlpha = 1;
+    }
+    if(t > 2.7){
+      const pp = (t - 2.7) / .9;
+      if(pp < 1){ cx.strokeStyle = 'rgba(201,255,216,' + (1 - pp).toFixed(2) + ')'; cx.lineWidth = 3 + 10 * (1 - pp); cx.beginPath(); cx.arc(mx, my, pp * W * .9, 0, 7); cx.stroke(); }
+      const fl = Math.max(0, 1 - (t - 2.7) / .22); if(fl > 0){ cx.fillStyle = 'rgba(220,255,230,' + (fl * .85).toFixed(2) + ')'; cx.fillRect(-12, -12, W + 24, H + 24); }
+      const fz = Math.min(W * .036, 13), yy = my + Math.min(W * .12, 56) * .9 + 10;
+      cx.globalAlpha = suave((t - 2.9) / .5); cx.fillStyle = 'rgba(0,0,0,.72)'; cx.beginPath(); cx.roundRect(mx - fz * 11, yy - fz * .9, fz * 22, fz * 2.3, fz * 1.1); cx.fill();
+      cx.fillStyle = '#2dff6b'; cx.shadowColor = '#2dff6b'; cx.shadowBlur = 8; cx.font = '700 ' + fz + 'px ' + MONO; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('SERVIÇO · DELEGADA · DEJEM', mx, yy + fz * .25);
+      const bw = 120 * k * suave((t - 3.1) / .7); cx.shadowBlur = 0; cx.fillStyle = 'rgba(45,255,107,.2)'; cx.fillRect(mx - 60 * k, yy + fz * 2.4, 120 * k, 3); cx.fillStyle = '#2dff6b'; cx.fillRect(mx - 60 * k, yy + fz * 2.4, bw, 3);
+      cx.globalAlpha = 1;
+    }
+    cx.fillStyle = 'rgba(0,0,0,.18)'; for(let y = 0; y < H; y += 3) cx.fillRect(0, y, W, 1);
+    const ve = cx.createRadialGradient(W / 2, H / 2, W * .3, W / 2, H / 2, H * .7); ve.addColorStop(0, 'rgba(0,0,0,0)'); ve.addColorStop(1, 'rgba(0,0,0,.7)'); cx.fillStyle = ve; cx.fillRect(0, 0, W, H);
+    cx.restore();
+  }
+  function loop(ts){
+    if(!document.getElementById('abertura')) return;      // abertura já saiu: para de desenhar
+    raf = requestAnimationFrame(loop);
+    const dt = Math.min(.05, (ts - (loop.u || ts)) / 1000); loop.u = ts;
+    quadro((ts - t0) / 1000 * VEL, dt * 60);
+  }
+  ajusta();
+  if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches){ for(let i = 0; i < 40; i++) quadro(4 + i * .05); }
+  else raf = requestAnimationFrame(loop);
+})();
 render();
 syncMostrar('off');
 requestAnimationFrame(() => rolarParaMesAtual());
