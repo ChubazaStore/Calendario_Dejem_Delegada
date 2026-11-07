@@ -1,9 +1,14 @@
 <!--
   ============================================
-  VERSÃO ATUAL: 185
+  VERSÃO ATUAL: 186
   ============================================
 
   Histórico de versões (calendário SERVIÇO / DELEGADA / DEJEM):
+  v186: PULAR A ABERTURA DE VERDADE. O toque da v185 não funcionava quando você
+    está logado (a abertura já estava "agendada para sair" e o toque era
+    ignorado) e o iPhone ainda pode ignorar "click" em área sem botão. Agora o
+    toque cancela a espera e sai na hora, e ouve o toque no iPhone direto
+    (touchstart/pointerdown).
   v185: TOQUE PARA PULAR A ABERTURA. Tocando na tela durante a abertura Matrix,
     ela sai na hora (com a mesma saída suave). Sem tocar, roda completa.
   v184: ABERTURA MAIS LENTA E COMPLETA. A abertura Matrix agora roda no tempo
@@ -3240,7 +3245,7 @@ async function avisoSemContaModal(){
 let syncUpdatedAt = (lerJSONLocal(SYNC_META_KEY) || {}).updatedAt || 0;
 let syncTimer = null;
 let syncPendente = false;
-const VERSAO_SITE = 185;
+const VERSAO_SITE = 186;
 let syncNuvemUpdatedAt = 0;
 let syncEstado = 'off';   // off | sync | ok | erro
 let syncMensagem = '';
@@ -5627,24 +5632,39 @@ applyLayout();
 const aberturaInicio = performance.now();
 let aberturaFechada = false;
 const ABERTURA_MIN = 4400;   // v184: animação Matrix completa (flash do nome em 2,7s, barra termina em ~3,8s)
-function fecharAbertura(pular){
+let aberturaTimer = 0, aberturaSaiu = false;
+function sairAbertura(){
+  if(aberturaSaiu) return;
+  aberturaSaiu = true;
+  const ab = document.getElementById('abertura'), r = document.documentElement;
+  try{ contarResumoAte = Date.now() + 250; render(); rolarParaMesAtual(); }catch(e){}
+  r.classList.add('entrando');
+  setTimeout(() => r.classList.remove('entrando'), 1300);
+  if(ab){ ab.classList.add('saindo'); setTimeout(() => ab.remove(), 420); }
+}
+function fecharAbertura(){
   if(aberturaFechada) return;
   aberturaFechada = true;
-  const espera = pular === true ? 0 : Math.max(0, ABERTURA_MIN - (performance.now() - aberturaInicio));
-  setTimeout(() => {
-    const ab = document.getElementById('abertura'), r = document.documentElement;
-    try{ contarResumoAte = Date.now() + 250; render(); rolarParaMesAtual(); }catch(e){}
-    r.classList.add('entrando');
-    setTimeout(() => r.classList.remove('entrando'), 1300);
-    if(ab){ ab.classList.add('saindo'); setTimeout(() => ab.remove(), 420); }
-  }, espera);
+  const espera = Math.max(0, ABERTURA_MIN - (performance.now() - aberturaInicio));
+  aberturaTimer = setTimeout(sairAbertura, espera);
+}
+// toque na abertura: cancela a espera e sai na hora (mesmo já agendada)
+function pularAbertura(){
+  aberturaFechada = true;
+  clearTimeout(aberturaTimer);
+  sairAbertura();
 }
 window.addEventListener('sync-backend-missing', fecharAbertura);
 setTimeout(fecharAbertura, 5200);
 (function abMatrix(){
   const ab = document.getElementById('abertura'), cv = document.getElementById('abCv');
   if(!ab || !cv) return;
-  ab.addEventListener('click', () => fecharAbertura(true));
+  ab.style.cursor = 'pointer'; ab.style.webkitTapHighlightColor = 'transparent'; ab.style.touchAction = 'manipulation';
+  let pulou = false;
+  const pular = ev => { if(pulou) return; pulou = true; try{ ev.preventDefault(); }catch(e){} pularAbertura(); };
+  ab.addEventListener('touchstart', pular, { passive: false });
+  ab.addEventListener('pointerdown', pular);
+  ab.addEventListener('click', pular);
   const cx = cv.getContext('2d'); if(!cx) return;
   const KAT = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉ0123456789ABCDEF<>/=+*#'.split('');
   const ch = () => KAT[(Math.random() * KAT.length) | 0];
